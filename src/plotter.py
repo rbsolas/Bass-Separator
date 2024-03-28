@@ -1,27 +1,12 @@
-import os
-import sys
 import numpy as np
-import librosa
-import librosa.display
 import matplotlib.pyplot as plt
-import tensorflow as tf
-import pandas as pd
-import IPython.display as ipd
-import musdb
-import subprocess
-import pydub
-import tensorflow_addons as tfa
-import time
-import shutil
-import ipdb
-import scipy as sp
-import soundfile as sf
-import museval
+import librosa # NOTE: librosa is built on top of matplotlib
+import librosa.display
 import random
 import math
+
 from scipy.io.wavfile import write
 from glob import glob
-
 from config import DEFAULT_SAMPLE_RATE, DEFAULT_WINDOW, DEFAULT_HOP
 
 class Plotter:

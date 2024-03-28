@@ -1,30 +1,14 @@
-import os
-import sys
 import numpy as np
-import librosa
+import librosa # NOTE: librosa is built on top of matplotlib
 import librosa.display
-import matplotlib.pyplot as plt
-import tensorflow as tf
-import pandas as pd
-import IPython.display as ipd
-import musdb
-import subprocess
-import pydub
-import tensorflow_addons as tfa
-import time
-import shutil
-import ipdb
-import scipy as sp
-import soundfile as sf
-import museval
 import random
 import math
+import subprocess
+
 from scipy.io.wavfile import write
 from glob import glob
-
 from config import PATH_TO_STEMS, PATH_TO_WAV
 from wav_handler import WavHandler
-
 
 class DatasetHandler:
     def __init__(self, path_to_stems: str=PATH_TO_STEMS, path_to_wav: str=PATH_TO_WAV) -> None:
@@ -58,59 +42,175 @@ class DatasetHandler:
                     vocals, _ = librosa.load(song + "\\vocals.wav", sr = None)
                     other, _ = librosa.load(song + "\\other.wav", sr = None)
 
-                    write('bassless.wav', sr, (drums + vocals + other)/3)
+                    write(song + "\\bassless.wav", sr, (drums + vocals + other)/3)
+                    print("Writing at " + song + "\\bassless.wav")
                 else:
-                    print("'bassless.wav' already exists!")
+                    print(f"'{song}\\bassless.wav' already exists!")
 
-        def loadTrainInput(self):
-            """
-            Converts each input wav (mixture.wav) into WavHandler object and appends to an array to be returned
-            """
+    def loadTrainInputWav(self):
+        """
+        Converts each input wav (mixture.wav) into WavHandler object and appends to an array to be returned
+        """
 
-            train_inputs = glob(self.path_wav + r"\train\mixture.wav")
+        train_inputs = glob(self.path_wav + r"\train\*\mixture.wav")
+        # print(self.path_wav + r"\train\*\mixture.wav")
 
-            inputs = []
+        inputs = []
 
-            for song in train_inputs:
-                wav_handler = WavHandler(song)
+        for song in train_inputs:
+            wav_handler = WavHandler(song)
 
-                inputs.append(wav_handler)
+            inputs.append(wav_handler.wav)
 
-            return inputs
+        return np.array(inputs) # (100, 1, 1)
 
-        def loadTrainOutput(self):
-            """
-            Converts each expected output wav (bass.wav, bassless.wav) into WavHandler object and appends to an array to be returned
-            """
-            train_bass = glob(self.path_wav + r"\train\bass.wav")
-            train_bassless = glob(self.path_wav + r"\train\bassless.wav")
+    def loadTrainOutputWav(self):
+        """
+        Converts each expected output wav (bass.wav, bassless.wav) into WavHandler object and appends to an array to be returned
+        """
+        train_bass = glob(self.path_wav + r"\train\*\bass.wav")
+        train_bassless = glob(self.path_wav + r"\train\*\bassless.wav")
 
-            outputs = []
+        outputs = []
 
-            for i in range(len(train_bass)): # train_bass and train_bassless have same length
+        for i in range(len(train_bass)): # train_bass and train_bassless have same length
+            bass_wav = WavHandler(train_bass[i])
+            bassless_wav = WavHandler(train_bassless[i])
+
+            outputs.append(np.array([bass_wav.wav, bassless_wav.wav]))
+
+        return np.array(outputs) # (100, 1, 2)
+
+    def loadTestWav(self):
+        """
+        Converts each mixture.wav in test folder into WavHandler object and appends to an array to be returned
+        """
+
+        test_inputs = glob(self.path_wav + r"\test\*\mixture.wav")
+
+        test = []
+
+        for song in test_inputs:
+            wav_handler = WavHandler(song)
+
+            test.append(wav_handler.wav)
+
+        return np.array(test) # (50, 1, 1)
+    
+    def writeTrainInputSpec(self): # https://stackoverflow.com/questions/53084637/how-do-you-open-npy-files
+        """
+        Writes computed segment spectrograms of each train input as a file named padded_spectrograms.npy
+        """
+
+        train_inputs = glob(self.path_wav + r"\train\*\mixture.wav")
+
+        # array_segment_spec = []
+
+        for song in train_inputs:
+            if len(glob(song[:-11] + "padded_spectrograms.npy")) <= 0:
+                obj = WavHandler(song)
+                segments = obj.segmentWav()
+                spectrograms = obj.computeSTFT(segments)
+                padded_spectrograms = obj.zeroPadSTFT(spectrograms)
+
+                # array_segment_spec.append(padded_spectrograms)
+                np.save(song[:-11] + "padded_spectrograms.npy", padded_spectrograms)
+            else:
+                print(f"'{song[:-11]}padded_spectrograms.npy' already exists!")
+
+
+        # return array_segment_spec
+    
+    def writeTrainOutputSpec(self):
+        """
+        Writes computed segment spectrograms of each train output as a file named bass_padded_spectrograms.npy and bassless_padded_spectrograms.npy
+        """
+
+        train_bass = glob(self.path_wav + r"\train\*\bass.wav")
+        train_bassless = glob(self.path_wav + r"\train\*\bassless.wav")
+
+        # array_segment_spec = []
+
+        for i in range(len(train_bass)): # train_bass and train_bassless have same length
+            if len(glob(train_bass[i][:-8] + "bass_padded_spectrograms.npy")) <= 0:
                 bass_wav = WavHandler(train_bass[i])
+                bass_segments = bass_wav.segmentWav()
+                bass_spectrograms = bass_wav.computeSTFT(bass_segments)
+                bass_padded_spectrograms = bass_wav.zeroPadSTFT(bass_spectrograms)
+
+                np.save(train_bass[i][:-8] + "bass_padded_spectrograms.npy", bass_padded_spectrograms)
+            else:
+                print(f"'{train_bass[i][:-8]}bass_padded_spectrograms.npy' already exists!")
+
+            if len(glob(train_bassless[i][:-12] + "bassless_padded_spectrograms.npy")) <= 0:
                 bassless_wav = WavHandler(train_bassless[i])
+                bassless_segments = bassless_wav.segmentWav()
+                bassless_spectrograms = bassless_wav.computeSTFT(bassless_segments)
+                bassless_padded_spectrograms = bassless_wav.zeroPadSTFT(bassless_spectrograms)
+                
+                np.save(train_bassless[i][:-12] + "bassless_padded_spectrograms.npy", bassless_padded_spectrograms)
+            else:
+                print(f"'{train_bassless[i][:-12]}bassless_padded_spectrograms.npy' already exists!")
 
-                outputs.append((bass_wav, bassless_wav))
+            # array_segment_spec.append(np.array([bass_padded_spectrograms, bassless_padded_spectrograms]))
 
-            return outputs
+        # return array_segment_spec
 
-        def loadTest(self):
-            """
-            Converts each mixture.wav in test folder into WavHandler object and appends to an array to be returned
-            """
+    def writeTestSpec(self):
+        """
+        Writes computed segment spectrograms of each test input as a file named padded_spectrograms.npy
+        """
 
-            test_inputs = glob(self.path_wav + r"\test\mixture.wav")
+        test_inputs = glob(self.path_wav + r"\test\*\mixture.wav")
 
-            inputs = []
+        # array_segment_spec = []
 
-            for song in test_inputs:
-                wav_handler = WavHandler(song)
+        for song in test_inputs:
+            if len(glob(song[:-11] + "padded_spectrograms.npy")) <= 0:
+                obj = WavHandler(song)
+                segments = obj.segmentWav()
+                spectrograms = obj.computeSTFT(segments)
+                padded_spectrograms = obj.zeroPadSTFT(spectrograms)
 
-                inputs.append(wav_handler)
+                # array_segment_spec.append(padded_spectrograms)
+                np.save(song[:-11] + "padded_spectrograms.npy", padded_spectrograms)
+            else:
+                print(f"'{song[:-11]}padded_spectrograms.npy' already exists!")
 
-            return inputs
+        # return array_segment_spec
+
+    def flattenArraySpec(self, array_spec: list): # https://stackoverflow.com/questions/33711985/flattening-a-list-of-numpy-arrays
+        return np.concatenate(array_spec).ravel()
+    
+    def loadTrainInputSpec(self):
+        """
+        Loads padded segment spectograms of each train input wav
+        """
+        train_inputs = glob(self.path_wav + r"\train\*\padded_spectrograms.npy")
+
+        array_segment_spec = []
+
+        for segment_spec_path in train_inputs:
+            segment_spec = np.load(segment_spec_path)
+
+            array_segment_spec.append(segment_spec)
+
+        return array_segment_spec
 
 
+    def loadTrainOutputSpec(self):
+        """
+        Loads padded segment spectograms of each train output wav (bass, bassless)
+        """
+        train_output_bass = glob(self.path_wav + r"\train\*\bass_padded_spectrograms.npy")
+        train_output_bassless = glob(self.path_wav + r"\train\*\bassless_padded_spectrograms.npy")
 
+        array_segment_spec_tup = []
 
+        for i in range(len(train_output_bass)):
+            segment_spec_bass = np.load(train_output_bass[i])
+            segment_spec_bassless = np.load(train_output_bassless[i])
+
+            array_segment_spec_tup.append(np.array([segment_spec_bass, segment_spec_bassless]))
+
+        return array_segment_spec_tup
