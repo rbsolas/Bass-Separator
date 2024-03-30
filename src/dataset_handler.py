@@ -4,16 +4,19 @@ import librosa.display
 import random
 import math
 import subprocess
+import pathlib
+import os
 
 from scipy.io.wavfile import write
 from glob import glob
-from config import PATH_TO_STEMS, PATH_TO_WAV
+from config import PATH_TO_STEMS, PATH_TO_WAV, BATCH_SIZE
 from wav_handler import WavHandler
 
 class DatasetHandler:
-    def __init__(self, path_to_stems: str=PATH_TO_STEMS, path_to_wav: str=PATH_TO_WAV) -> None:
+    def __init__(self, path_to_stems: str=PATH_TO_STEMS, path_to_wav: str=PATH_TO_WAV, batch_size: int=BATCH_SIZE) -> None:
         self.path_stems = path_to_stems
         self.path_wav = path_to_wav
+        self.batch_size = batch_size
 
     def stemToWav(self) -> None:
         """
@@ -101,10 +104,8 @@ class DatasetHandler:
         """
         Writes computed segment spectrograms of each train input as a file named padded_spectrograms.npy
         """
-
+        """
         train_inputs = glob(self.path_wav + r"\train\*\mixture.wav")
-
-        # array_segment_spec = []
 
         for song in train_inputs:
             if len(glob(song[:-11] + "padded_spectrograms.npy")) <= 0:
@@ -117,44 +118,93 @@ class DatasetHandler:
                 np.save(song[:-11] + "padded_spectrograms.npy", padded_spectrograms)
             else:
                 print(f"'{song[:-11]}padded_spectrograms.npy' already exists!")
+        """
 
+        if not os.path.exists("./dataset/npy"):
+            os.mkdir("./dataset/npy")
 
-        # return array_segment_spec
+        if not os.path.exists("./dataset/npy/train"):
+            os.mkdir("./dataset/npy/train")
+
+        if not os.path.exists("./dataset/npy/train/input"):
+            os.mkdir("./dataset/npy/train/input")
+
+        train_inputs = glob(self.path_wav + r"\train\*\mixture.wav")
+        i = 0
+
+        for song in train_inputs:
+            obj = WavHandler(song)
+            segments = obj.segmentWav()
+            spectrograms = obj.computeSTFT(segments)
+            padded_spectrograms = obj.zeroPadSTFT(spectrograms)
+
+            for spec in padded_spectrograms:
+                if not os.path.exists(f"./dataset/npy/train/input/padded_{i}.npy"):
+                    np.save(f"./dataset/npy/train/input/padded_{i}.npy", spec[:, :, np.newaxis])
+                else:
+                    print(f"'./dataset/npy/train/input/padded_{i}.npy' already exists!")
+                i += 1
     
     def writeTrainOutputSpec(self):
         """
         Writes computed segment spectrograms of each train output as a file named bass_padded_spectrograms.npy and bassless_padded_spectrograms.npy
         """
-
+        """
         train_bass = glob(self.path_wav + r"\train\*\bass.wav")
         train_bassless = glob(self.path_wav + r"\train\*\bassless.wav")
 
-        # array_segment_spec = []
-
         for i in range(len(train_bass)): # train_bass and train_bassless have same length
-            if len(glob(train_bass[i][:-8] + "bass_padded_spectrograms.npy")) <= 0:
+            if len(glob(train_bass[i][:-8] + "padded_spectrograms_out.npy")) <= 0:
                 bass_wav = WavHandler(train_bass[i])
                 bass_segments = bass_wav.segmentWav()
                 bass_spectrograms = bass_wav.computeSTFT(bass_segments)
-                bass_padded_spectrograms = bass_wav.zeroPadSTFT(bass_spectrograms)
+                bass_padded_spectrograms = bass_wav.zeroPadSTFT(bass_spectrograms) # (1040, 176)
 
-                np.save(train_bass[i][:-8] + "bass_padded_spectrograms.npy", bass_padded_spectrograms)
-            else:
-                print(f"'{train_bass[i][:-8]}bass_padded_spectrograms.npy' already exists!")
-
-            if len(glob(train_bassless[i][:-12] + "bassless_padded_spectrograms.npy")) <= 0:
                 bassless_wav = WavHandler(train_bassless[i])
                 bassless_segments = bassless_wav.segmentWav()
                 bassless_spectrograms = bassless_wav.computeSTFT(bassless_segments)
-                bassless_padded_spectrograms = bassless_wav.zeroPadSTFT(bassless_spectrograms)
-                
-                np.save(train_bassless[i][:-12] + "bassless_padded_spectrograms.npy", bassless_padded_spectrograms)
+                bassless_padded_spectrograms = bassless_wav.zeroPadSTFT(bassless_spectrograms) # (1040, 176)
+
+                stacked_spec = np.dstack((bass_padded_spectrograms, bassless_padded_spectrograms)) # Stacks along the 3rd axis (1040, 176, 2)
+
+                np.save(train_bass[i][:-8] + "padded_spectrograms_out.npy", stacked_spec)
             else:
-                print(f"'{train_bassless[i][:-12]}bassless_padded_spectrograms.npy' already exists!")
+                print(f"'{train_bass[i][:-8]}padded_spectrograms_out.npy' already exists!")
+        """
+        if not os.path.exists("./dataset/npy"):
+            os.mkdir("./dataset/npy")
 
-            # array_segment_spec.append(np.array([bass_padded_spectrograms, bassless_padded_spectrograms]))
+        if not os.path.exists("./dataset/npy/train"):
+            os.mkdir("./dataset/npy/train")
 
-        # return array_segment_spec
+        if not os.path.exists("./dataset/npy/train/output"):
+            os.mkdir("./dataset/npy/train/output")
+
+        train_bass = glob(self.path_wav + r"\train\*\bass.wav")
+        train_bassless = glob(self.path_wav + r"\train\*\bassless.wav")
+        i = 0
+
+        for j in range(len(train_bass)): # train_bass and train_bassless have same length
+            bass_wav = WavHandler(train_bass[j])
+            bass_segments = bass_wav.segmentWav()
+            bass_spectrograms = bass_wav.computeSTFT(bass_segments)
+            bass_padded_spectrograms = bass_wav.zeroPadSTFT(bass_spectrograms) # (x, 1040, 176)
+
+            bassless_wav = WavHandler(train_bassless[j])
+            bassless_segments = bassless_wav.segmentWav()
+            bassless_spectrograms = bassless_wav.computeSTFT(bassless_segments)
+            bassless_padded_spectrograms = bassless_wav.zeroPadSTFT(bassless_spectrograms) # (x, 1040, 176)
+
+            stacked_spec = np.stack((bass_padded_spectrograms, bassless_padded_spectrograms), axis=-1) # Stacks along a new 4th axis (x, 1040, 176, 2)
+
+            for spec in stacked_spec:
+                if not os.path.exists(f"./dataset/npy/train/output/output_padded_{i}.npy"):
+                    np.save(f"./dataset/npy/train/output/output_padded_{i}.npy", spec)
+                else:
+                    print(f"'./dataset/npy/train/output/output_padded_{i}.npy' already exists!")
+                
+                i += 1
+
 
     def writeTestSpec(self):
         """
@@ -189,11 +239,24 @@ class DatasetHandler:
         train_inputs = glob(self.path_wav + r"\train\*\padded_spectrograms.npy")
 
         array_segment_spec = []
+        '''
+        i = 0
 
         for segment_spec_path in train_inputs:
             segment_spec = np.load(segment_spec_path)
 
+            if i == 0:
+                array_segment_spec = segment_spec
+            else:
+                array_segment_spec = np.concatenate((array_segment_spec, segment_spec), axis=0) # Maintain 3D shape
+
+            i += 1
+        '''
+        for segment_spec_path in train_inputs:
+            segment_spec = np.load(segment_spec_path)
             array_segment_spec.append(segment_spec)
+
+        array_segment_spec = np.concatenate(array_segment_spec, axis=0) # Maintain 3D shape
 
         return array_segment_spec
 
@@ -202,15 +265,76 @@ class DatasetHandler:
         """
         Loads padded segment spectograms of each train output wav (bass, bassless)
         """
-        train_output_bass = glob(self.path_wav + r"\train\*\bass_padded_spectrograms.npy")
-        train_output_bassless = glob(self.path_wav + r"\train\*\bassless_padded_spectrograms.npy")
+        train_output = glob(self.path_wav + r"\train\*\padded_spectrograms_out.npy")
 
-        array_segment_spec_tup = []
+        array_segment_spec = []
+        '''
+        i = 0
 
-        for i in range(len(train_output_bass)):
-            segment_spec_bass = np.load(train_output_bass[i])
-            segment_spec_bassless = np.load(train_output_bassless[i])
+        for segment_spec_path in train_output:
+            segment_spec = np.load(segment_spec_path)
 
-            array_segment_spec_tup.append(np.array([segment_spec_bass, segment_spec_bassless]))
+            if i == 0:
+                array_segment_spec = segment_spec
+            else:
+                array_segment_spec = np.concatenate((array_segment_spec, segment_spec), axis=0) # Maintain 3D shape
 
-        return array_segment_spec_tup
+            i += 1
+        '''
+
+        for segment_spec_path in train_output:
+            segment_spec = np.load(segment_spec_path)
+            array_segment_spec.append(segment_spec)
+
+        array_segment_spec = np.concatenate(array_segment_spec, axis=0) # Maintain 3D shape
+
+        return array_segment_spec
+    
+    def removeTrainOutputSpec(self):
+        train_output = glob(self.path_wav + r"\train\*\padded_spectrograms_out.npy")
+
+        for segment_spec in train_output:
+                pathlib.Path(segment_spec).unlink()
+
+    def removeTrainInputSpec(self):
+        train_input = glob(self.path_wav + r"\train\*\padded_spectrograms.npy")
+
+        for segment_spec in train_input:
+                pathlib.Path(segment_spec).unlink()
+
+    def dataGenerator(self):
+        """
+        https://stackoverflow.com/questions/74404355/how-do-i-use-a-custom-generator-function-to-feed-keras-model-fit-samples-one-by
+        https://stackoverflow.com/questions/56079223/custom-keras-data-generator-with-yield
+        https://stackoverflow.com/questions/65928983/how-to-input-large-amount-of-data-for-training-keras-model-to-prevent-ram-crashi
+        """
+        # while True:
+        start = 0
+        end = self.batch_size
+
+        num_samples = len(glob("./dataset/npy/train/input/*.npy"))
+
+        while start < num_samples:
+            train_inputs = []
+            train_outputs = []
+
+            if end > num_samples:
+                end = num_samples
+            
+            for i in range(start, end - 1): 
+                spec_in = np.load(f"./dataset/npy/train/input/padded_{i}.npy")
+                spec_out = np.load(f"./dataset/npy/train/output/output_padded_{i}.npy")
+
+                train_inputs.append(spec_in)
+                train_outputs.append(spec_out)
+
+            train_inputs = np.array(train_inputs)
+            train_outputs = np.array(train_outputs)
+
+            # print(train_inputs.shape)
+            # print(train_outputs.shape)
+
+            yield train_inputs, train_outputs
+
+            start += self.batch_size
+            end += self.batch_size
