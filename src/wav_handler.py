@@ -131,14 +131,14 @@ class WavHandler:
 
         return stft
     
-    def computeMelSpec(self, wav: np.array, segmented: bool=True) -> np.array:
+    def computeMelSpec(self, stft: np.array, segmented: bool=True) -> np.array:
         """
-        Gets amplitude (linear) from computed STFT and turns it to decibels (logarithmic). Note that phase is preserved
+        Gets amplitude (linear) from computed STFT and turns it to decibels (logarithmic). Note that phase is NOT preserved
         """
         if segmented:
-            wav = np.abs(wav)
+            stft = np.abs(stft)
 
-            array_log_spec = librosa.amplitude_to_db(wav) # We make sense of sound logarithmically
+            array_log_spec = librosa.amplitude_to_db(stft) # We make sense of sound logarithmically
 
             return array_log_spec
     
