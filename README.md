@@ -9,18 +9,18 @@ Based on Pourtorkan's (2022) idea, one can actually transform the BSS problem in
 
 <p align="center">
   <img src="dump/waveform.png" alt="Waveform" style="max-width:25%">
-  <i>Waveform -- the visual representation of audio we're most familiar with</i>
 </p>
+<p align="center"><i>Waveform -- the visual representation of audio we're most familiar with</i></p>
 
 <p align="center">
   <img src="dump/fft.png" alt="Fourier Transform" style="max-width:25%">
-  <i>Fourier Transform -- the 'snapshot' of the whole frequency range and their average magnitudes throughout the whole signal</i>
 </p>
+<p align="center"><i>Fourier Transform -- the 'snapshot' of the whole frequency range and their average magnitudes throughout the whole signal</i></p>
 
 <p align="center">
   <img src="dump/stft.png" alt="Spectrogram" style="max-width:25%">
-  <i>Spectrogram -- combinations of these 'snapshots' over several time windows throughout the signal, with the color representing the magnitude (similar to a heat map)</i>
 </p>
+<p align="center"><i>Spectrogram -- combinations of these 'snapshots' over several time windows throughout the signal, with the color representing the magnitude (similar to a heat map)</i></p>
 
 The program essentially takes a path to a `.wav` file, splits it into several segments, computes the spectrograms of those segments, and passes those spectrograms to a pretrained model which predicts the bass track and the bassless track (the track without the bass stem) of the original song.
 
