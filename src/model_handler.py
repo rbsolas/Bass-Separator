@@ -255,13 +255,13 @@ class ModelHandler:
 
         return bass_istft, bassless_istft
     
-    def saveOutputs(self, bass_istft: WavHandler, bassless_istft: WavHandler, name: str) -> None:
+    def saveOutputs(self, bass_istft: WavHandler, bassless_istft: WavHandler, path: str) -> None:
     
         bass_wav = bass_istft.wav
         bassless_wav = bassless_istft.wav
         sr = bass_istft.sr # Same with bassless_istft
 
-        write(f"{name}_bass.wav", rate=sr, data=bass_wav)
-        write(f"{name}_bassless.wav", rate=sr, data=bassless_wav)
+        write(f"{path}_bass.wav", rate=sr, data=bass_wav)
+        write(f"{path}_bassless.wav", rate=sr, data=bassless_wav)
 
         

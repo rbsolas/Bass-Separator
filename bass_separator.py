@@ -31,10 +31,11 @@ if __name__ == "__main__":
         sys.exit("Improper path to .wav file provided. Please make sure that the path is separated by '\\' and ends in '.wav'")
 
     song_name = song_path_as_list[-1][:-4]
+    song_path = song_path[:-4]
 
     print(f"No model name provided. Using {DEFAULT_MODEL} to predict.")
     bass, bassless = model_handler.predictSong(song_path)
 
 
     bass_istft, bassless_istft = model_handler.getOutputWavs(song_path, bass, bassless)
-    model_handler.saveOutputs(bass_istft, bassless_istft, song_name)
+    model_handler.saveOutputs(bass_istft, bassless_istft, song_path)
