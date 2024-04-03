@@ -1,7 +1,7 @@
 # Bass Separator
 
 ## About the Project
-Oftentimes, when we listen to a song, we only hear the end product, or *the final mix*, so to speak. This mixture contains all the individual tracks (from vocals to the instruments) mixed and mastered into a single track. Now, a question arises: *how can we revert the process and get the individual sources back, given only the end product?*This area of study is otherwise known as **Blind Source Separation (BSS)**. 
+Oftentimes, when we listen to a song, we only hear the end product, or *the final mix*, so to speak. This mixture contains all the individual tracks (from vocals to the instruments) mixed and mastered into a single track. Now, a question arises: *how can we revert the process and get the individual sources back, given only the end product?* This area of study is otherwise known as **Blind Source Separation (BSS)**. 
 
 The Bass Separator is a personal project I developed focusing on this area to extract the bass instrumental track from any song using **deep learning** and **Short-Time Fourier Transform (STFT)**. The program uses a convolutional neural network architecture called the U-Net developed by Ronneberger et al. (2015). The U-Net is typically used in image segmentation in biomedical applications to determine *what* features are in an image and even *where* they are in that image.
 
