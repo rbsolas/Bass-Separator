@@ -5,14 +5,13 @@ import librosa.display
 import random
 import math
 import subprocess
-import glob
 import os
 import datetime
 
 from config import INPUT_HEIGHT, INPUT_WIDTH, INPUT_CHANNELS, OUTPUT_CHANNELS, BATCH_SIZE, EPOCHS, PATH_TO_MODEL, PATH_TO_LOGS, PATIENCE, DEFAULT_MODEL
 from wav_handler import WavHandler
 from scipy.io.wavfile import write
-
+from glob import glob
 
 """
 @author: Sreenivas Bhattiprolu, Python for Microscopists
