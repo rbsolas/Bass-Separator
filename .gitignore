@@ -1,7 +1,6 @@
 # Dataset #
 ###########
 dataset/
-*.wav
 
 # Byte-compiled / optimized / DLL files #
 #########################################
